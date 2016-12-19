@@ -157,6 +157,7 @@ type Viper struct {
 	typeByDefValue bool
 
 	onConfigChangeList []func(fsnotify.Event)
+	reloadFlag         chan bool
 }
 
 // New returns an initialized Viper instance.
@@ -174,6 +175,7 @@ func New() *Viper {
 	v.aliases = make(map[string]string)
 	v.typeByDefValue = false
 	v.onConfigChangeList = make([]func(fsnotify.Event), 0)
+	v.reloadFlag = make(chan bool, 1)
 
 	return v
 }
@@ -235,6 +237,22 @@ func (v *Viper) OnConfigChange(run func(in fsnotify.Event)) {
 	v.onConfigChangeList = append(v.onConfigChangeList, run)
 }
 
+func (v *Viper) patientlyReloadConfig(event fsnotify.Event) {
+	if len(v.reloadFlag) > 0 {
+		return
+	}
+	v.reloadFlag <- true
+	time.Sleep(200 * time.Millisecond)
+	err := v.ReadInConfig()
+	if err != nil {
+		log.Println("error:", err)
+	}
+	for _, onConfigChange := range v.onConfigChangeList {
+		onConfigChange(event)
+	}
+	<-v.reloadFlag
+}
+
 func WatchConfig() { v.WatchConfig() }
 func (v *Viper) WatchConfig() {
 	go func() {
@@ -244,7 +262,6 @@ func (v *Viper) WatchConfig() {
 		}
 		defer watcher.Close()
 
-		// we have to watch the entire directory to pick up renames/atomic saves in a cross-platform way
 		filename, err := v.getConfigFile()
 		if err != nil {
 			log.Println("error:", err)
@@ -262,13 +279,7 @@ func (v *Viper) WatchConfig() {
 					// we only care about the config file
 					if filepath.Clean(event.Name) == configFile {
 						if event.Op&fsnotify.Write == fsnotify.Write || event.Op&fsnotify.Create == fsnotify.Create {
-							err := v.ReadInConfig()
-							if err != nil {
-								log.Println("error:", err)
-							}
-							for _, onConfigChange := range v.onConfigChangeList {
-								onConfigChange(event)
-							}
+							go v.patientlyReloadConfig(event)
 						}
 					}
 				case err := <-watcher.Errors:
@@ -277,7 +288,11 @@ func (v *Viper) WatchConfig() {
 			}
 		}()
 
+		// we have to watch both the config file and the parent directory
+		// the entire directory, to pick up renames/atomic saves in a cross-platform way
+		// the file, becuase when the file is mounted (like kubernetes configmap), no event is fired from the directory
 		watcher.Add(configDir)
+		watcher.Add(configFile)
 		<-done
 	}()
 }
