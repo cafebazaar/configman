@@ -156,6 +156,7 @@ type Viper struct {
 	aliases        map[string]string
 	typeByDefValue bool
 
+	watcher            *fsnotify.Watcher
 	onConfigChangeList []func(fsnotify.Event)
 	reloadFlag         chan bool
 }
@@ -242,59 +243,72 @@ func (v *Viper) patientlyReloadConfig(event fsnotify.Event) {
 		return
 	}
 	v.reloadFlag <- true
+	defer func() {
+		<-v.reloadFlag
+	}()
+
+	// Wait!
 	time.Sleep(200 * time.Millisecond)
+
 	err := v.ReadInConfig()
 	if err != nil {
 		log.Println("error:", err)
+		return
 	}
 	for _, onConfigChange := range v.onConfigChangeList {
 		onConfigChange(event)
 	}
-	<-v.reloadFlag
+	// In case of remove/recreate:
+	filename, err := v.getConfigFile()
+	if err != nil {
+		log.Println("error:", err)
+		return
+	}
+	configFile := filepath.Clean(filename)
+	v.watcher.Remove(configFile)
+	v.watcher.Add(configFile)
 }
 
-func WatchConfig() { v.WatchConfig() }
-func (v *Viper) WatchConfig() {
+func WatchConfig() error { return v.WatchConfig() }
+func (v *Viper) WatchConfig() error {
+	var err error
+	v.watcher, err = fsnotify.NewWatcher()
+	if err != nil {
+		return err
+	}
+	filename, err := v.getConfigFile()
+	if err != nil {
+		return err
+	}
+	configFile := filepath.Clean(filename)
+	configDir, _ := filepath.Split(configFile)
+
 	go func() {
-		watcher, err := fsnotify.NewWatcher()
-		if err != nil {
-			log.Fatal(err)
-		}
-		defer watcher.Close()
-
-		filename, err := v.getConfigFile()
-		if err != nil {
-			log.Println("error:", err)
-			return
-		}
-
-		configFile := filepath.Clean(filename)
-		configDir, _ := filepath.Split(configFile)
+		defer v.watcher.Close()
 
 		done := make(chan bool)
 		go func() {
 			for {
 				select {
-				case event := <-watcher.Events:
+				case event := <-v.watcher.Events:
 					// we only care about the config file
 					if filepath.Clean(event.Name) == configFile {
-						if event.Op&fsnotify.Write == fsnotify.Write || event.Op&fsnotify.Create == fsnotify.Create {
-							go v.patientlyReloadConfig(event)
-						}
+						go v.patientlyReloadConfig(event)
 					}
-				case err := <-watcher.Errors:
+				case err := <-v.watcher.Errors:
 					log.Println("error:", err)
 				}
 			}
 		}()
 
-		// we have to watch both the config file and the parent directory
+		// We have to watch both the config file and the parent directory
 		// the entire directory, to pick up renames/atomic saves in a cross-platform way
-		// the file, becuase when the file is mounted (like kubernetes configmap), no event is fired from the directory
-		watcher.Add(configDir)
-		watcher.Add(configFile)
+		// the file, becuase when the file is mounted, no event is fired from the directory
+		v.watcher.Add(configDir)
+		v.watcher.Add(configFile)
 		<-done
 	}()
+	return nil
 }
 
 // SetConfigFile explicitly defines the path, name and extension of the config file
