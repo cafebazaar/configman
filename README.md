@@ -12,7 +12,7 @@ Many Go projects are built using Viper including:
 * [BloomApi](https://www.bloomapi.com/)
 * [doctl](https://github.com/digitalocean/doctl)
 
-[![Build Status](https://travis-ci.org/spf13/viper.svg)](https://travis-ci.org/spf13/viper) [![Join the chat at https://gitter.im/spf13/viper](https://badges.gitter.im/Join%20Chat.svg)](https://gitter.im/spf13/viper?utm_source=badge&utm_medium=badge&utm_campaign=pr-badge&utm_content=badge) [![GoDoc](https://godoc.org/github.com/spf13/viper?status.svg)](https://godoc.org/github.com/spf13/viper)
+[![Build Status](https://travis-ci.org/cafebazaar/viper.svg)](https://travis-ci.org/cafebazaar/viper) [![Join the chat at https://gitter.im/cafebazaar/viper](https://badges.gitter.im/Join%20Chat.svg)](https://gitter.im/cafebazaar/viper?utm_source=badge&utm_medium=badge&utm_campaign=pr-badge&utm_content=badge) [![GoDoc](https://godoc.org/github.com/cafebazaar/viper?status.svg)](https://godoc.org/github.com/cafebazaar/viper)
 
 
 ## What is Viper?
@@ -317,7 +317,7 @@ viper.BindFlagValues("my-flags", fSet)
 To enable remote support in Viper, do a blank import of the `viper/remote`
 package:
 
-`import _ "github.com/spf13/viper/remote"`
+`import _ "github.com/cafebazaar/viper/remote"`
 
 Viper will read a config string (as JSON, TOML, YAML or HCL) retrieved from a path
 in a Key/Value store such as etcd or Consul.  These values take precedence over
