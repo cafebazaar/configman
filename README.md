@@ -12,7 +12,7 @@ Many Go projects are built using Viper including:
 * [BloomApi](https://www.bloomapi.com/)
 * [doctl](https://github.com/digitalocean/doctl)
 
-[![Build Status](https://travis-ci.org/cafebazaar/viper.svg)](https://travis-ci.org/cafebazaar/viper) [![Join the chat at https://gitter.im/cafebazaar/viper](https://badges.gitter.im/Join%20Chat.svg)](https://gitter.im/cafebazaar/viper?utm_source=badge&utm_medium=badge&utm_campaign=pr-badge&utm_content=badge) [![GoDoc](https://godoc.org/github.com/cafebazaar/viper?status.svg)](https://godoc.org/github.com/cafebazaar/viper)
+[![Build Status](https://travis-ci.org/cafebazaar/viper.svg)](https://travis-ci.org/cafebazaar/viper) [![GoDoc](https://godoc.org/github.com/cafebazaar/viper?status.svg)](https://godoc.org/github.com/cafebazaar/viper)
 
 
 ## What is Viper?
