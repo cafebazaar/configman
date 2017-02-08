@@ -6,7 +6,7 @@
 // Viper is a application configuration system.
 // It believes that applications can be configured a variety of ways
 // via flags, ENVIRONMENT variables, configuration files retrieved
-// from the file system, or a remote key/value store.
+// from the file system
 
 package viper
 

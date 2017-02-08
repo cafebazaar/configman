@@ -1,4 +1,4 @@
-package viper
+package configman
 
 import (
 	"time"

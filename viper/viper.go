@@ -6,7 +6,7 @@
 // Viper is a application configuration system.
 // It believes that applications can be configured a variety of ways
 // via flags, ENVIRONMENT variables, configuration files retrieved
-// from the file system, or a remote key/value store.
+// from the file system
 
 // Each item takes precedence over the item below it:
 
@@ -44,14 +44,6 @@ func init() {
 	v = New()
 }
 
-type remoteConfigFactory interface {
-	Get(rp RemoteProvider) (io.Reader, error)
-	Watch(rp RemoteProvider) (io.Reader, error)
-}
-
-// RemoteConfig is optional, see the remote package
-var RemoteConfig remoteConfigFactory
-
 // UnsupportedConfigError denotes encountering an unsupported
 // configuration filetype.
 type UnsupportedConfigError string
@@ -59,25 +51,6 @@ type UnsupportedConfigError string
 // Error returns the formatted configuration error.
 func (str UnsupportedConfigError) Error() string {
 	return fmt.Sprintf("Unsupported Config Type %q", string(str))
-}
-
-// UnsupportedRemoteProviderError denotes encountering an unsupported remote
-// provider. Currently only etcd and Consul are
-// supported.
-type UnsupportedRemoteProviderError string
-
-// Error returns the formatted remote provider error.
-func (str UnsupportedRemoteProviderError) Error() string {
-	return fmt.Sprintf("Unsupported Remote Provider Type %q", string(str))
-}
-
-// RemoteConfigError denotes encountering an error while trying to
-// pull the configuration from the remote provider.
-type RemoteConfigError string
-
-// Error returns the formatted remote provider error
-func (rce RemoteConfigError) Error() string {
-	return fmt.Sprintf("Remote Configurations Error: %s", string(rce))
 }
 
 // ConfigFileNotFoundError denotes failing to find configuration file.
@@ -135,9 +108,6 @@ type Viper struct {
 	// The filesystem to read config from.
 	fs afero.Fs
 
-	// A set of remote providers to search for the configuration
-	remoteProviders []*defaultRemoteProvider
-
 	// Name of file to look for inside the path
 	configName string
 	configFile string
@@ -187,48 +157,10 @@ func New() *Viper {
 func Reset() {
 	v = New()
 	SupportedExts = []string{"json", "toml", "yaml", "yml", "hcl"}
-	SupportedRemoteProviders = []string{"etcd", "consul"}
-}
-
-type defaultRemoteProvider struct {
-	provider      string
-	endpoint      string
-	path          string
-	secretKeyring string
-}
-
-func (rp defaultRemoteProvider) Provider() string {
-	return rp.provider
-}
-
-func (rp defaultRemoteProvider) Endpoint() string {
-	return rp.endpoint
-}
-
-func (rp defaultRemoteProvider) Path() string {
-	return rp.path
-}
-
-func (rp defaultRemoteProvider) SecretKeyring() string {
-	return rp.secretKeyring
-}
-
-// RemoteProvider stores the configuration necessary
-// to connect to a remote key/value store.
-// Optional secretKeyring to unencrypt encrypted values
-// can be provided.
-type RemoteProvider interface {
-	Provider() string
-	Endpoint() string
-	Path() string
-	SecretKeyring() string
 }
 
 // SupportedExts are universally supported extensions.
 var SupportedExts = []string{"json", "toml", "yaml", "yml", "properties", "props", "prop", "hcl"}
-
-// SupportedRemoteProviders are universally supported remote providers.
-var SupportedRemoteProviders = []string{"etcd", "consul"}
 
 // OnConfigChange adds a change listener to the list of current listeners
 func OnConfigChange(run func(in fsnotify.Event)) { v.OnConfigChange(run) }
@@ -367,77 +299,6 @@ func (v *Viper) AddConfigPath(in string) {
 			v.configPaths = append(v.configPaths, absin)
 		}
 	}
-}
-
-// AddRemoteProvider adds a remote configuration source.
-// Remote Providers are searched in the order they are added.
-// provider is a string value, "etcd" or "consul" are currently supported.
-// endpoint is the url.  etcd requires http://ip:port  consul requires ip:port
-// path is the path in the k/v store to retrieve configuration
-// To retrieve a config file called myapp.json from /configs/myapp.json
-// you should set path to /configs and set config name (SetConfigName()) to
-// "myapp"
-func AddRemoteProvider(provider, endpoint, path string) error {
-	return v.AddRemoteProvider(provider, endpoint, path)
-}
-func (v *Viper) AddRemoteProvider(provider, endpoint, path string) error {
-	if !stringInSlice(provider, SupportedRemoteProviders) {
-		return UnsupportedRemoteProviderError(provider)
-	}
-	if provider != "" && endpoint != "" {
-		jww.INFO.Printf("adding %s:%s to remote provider list", provider, endpoint)
-		rp := &defaultRemoteProvider{
-			endpoint: endpoint,
-			provider: provider,
-			path:     path,
-		}
-		if !v.providerPathExists(rp) {
-			v.remoteProviders = append(v.remoteProviders, rp)
-		}
-	}
-	return nil
-}
-
-// AddSecureRemoteProvider adds a remote configuration source.
-// Secure Remote Providers are searched in the order they are added.
-// provider is a string value, "etcd" or "consul" are currently supported.
-// endpoint is the url.  etcd requires http://ip:port  consul requires ip:port
-// secretkeyring is the filepath to your openpgp secret keyring.  e.g. /etc/secrets/myring.gpg
-// path is the path in the k/v store to retrieve configuration
-// To retrieve a config file called myapp.json from /configs/myapp.json
-// you should set path to /configs and set config name (SetConfigName()) to
-// "myapp"
-// Secure Remote Providers are implemented with github.com/xordataexchange/crypt
-func AddSecureRemoteProvider(provider, endpoint, path, secretkeyring string) error {
-	return v.AddSecureRemoteProvider(provider, endpoint, path, secretkeyring)
-}
-
-func (v *Viper) AddSecureRemoteProvider(provider, endpoint, path, secretkeyring string) error {
-	if !stringInSlice(provider, SupportedRemoteProviders) {
-		return UnsupportedRemoteProviderError(provider)
-	}
-	if provider != "" && endpoint != "" {
-		jww.INFO.Printf("adding %s:%s to remote provider list", provider, endpoint)
-		rp := &defaultRemoteProvider{
-			endpoint:      endpoint,
-			provider:      provider,
-			path:          path,
-			secretKeyring: secretkeyring,
-		}
-		if !v.providerPathExists(rp) {
-			v.remoteProviders = append(v.remoteProviders, rp)
-		}
-	}
-	return nil
-}
-
-func (v *Viper) providerPathExists(p *defaultRemoteProvider) bool {
-	for _, y := range v.remoteProviders {
-		if reflect.DeepEqual(y, p) {
-			return true
-		}
-	}
-	return false
 }
 
 // searchMap recursively searches for a value for path in source map.
@@ -1272,18 +1133,6 @@ func mergeMaps(
 	}
 }
 
-// ReadRemoteConfig attempts to get configuration from a remote source
-// and read it in the remote configuration registry.
-func ReadRemoteConfig() error { return v.ReadRemoteConfig() }
-func (v *Viper) ReadRemoteConfig() error {
-	return v.getKeyValueConfig()
-}
-
-func WatchRemoteConfig() error { return v.WatchRemoteConfig() }
-func (v *Viper) WatchRemoteConfig() error {
-	return v.watchKeyValueConfig()
-}
-
 // Unmarshall a Reader into a map.
 // Should probably be an unexported function.
 func unmarshalReader(in io.Reader, c map[string]interface{}) error {
@@ -1299,54 +1148,6 @@ func (v *Viper) insensitiviseMaps() {
 	insensitiviseMap(v.defaults)
 	insensitiviseMap(v.override)
 	insensitiviseMap(v.kvstore)
-}
-
-// Retrieve the first found remote configuration.
-func (v *Viper) getKeyValueConfig() error {
-	if RemoteConfig == nil {
-		return RemoteConfigError("Enable the remote features by doing a blank import of the viper/remote package: '_ github.com/cafebazaar/viper/remote'")
-	}
-
-	for _, rp := range v.remoteProviders {
-		val, err := v.getRemoteConfig(rp)
-		if err != nil {
-			continue
-		}
-		v.kvstore = val
-		return nil
-	}
-	return RemoteConfigError("No Files Found")
-}
-
-func (v *Viper) getRemoteConfig(provider RemoteProvider) (map[string]interface{}, error) {
-	reader, err := RemoteConfig.Get(provider)
-	if err != nil {
-		return nil, err
-	}
-	err = v.unmarshalReader(reader, v.kvstore)
-	return v.kvstore, err
-}
-
-// Retrieve the first found remote configuration.
-func (v *Viper) watchKeyValueConfig() error {
-	for _, rp := range v.remoteProviders {
-		val, err := v.watchRemoteConfig(rp)
-		if err != nil {
-			continue
-		}
-		v.kvstore = val
-		return nil
-	}
-	return RemoteConfigError("No Files Found")
-}
-
-func (v *Viper) watchRemoteConfig(provider RemoteProvider) (map[string]interface{}, error) {
-	reader, err := RemoteConfig.Watch(provider)
-	if err != nil {
-		return nil, err
-	}
-	err = v.unmarshalReader(reader, v.kvstore)
-	return v.kvstore, err
 }
 
 // AllKeys returns all keys holding a value, regardless of where they are set.
