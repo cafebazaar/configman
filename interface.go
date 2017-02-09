@@ -31,16 +31,15 @@ type ConfigManager interface {
 	// Sub returns new Config instance representing a sub tree of this instance.
 	Sub(key string) ConfigManager
 
-	SetEnvPrefix(string)
+	// Unmarshal unmarshals the config into a Struct. Make sure that the tags
+	// on the fields of the structure are properly set.
+	Unmarshal(rawVal interface{}) error
+	// UnmarshalKey takes a single key and unmarshals it into a Struct.
+	UnmarshalKey(key string, rawVal interface{}) error
+
 	// RegisterAlias provides another accessor for the same key.
 	// This enables one to change a name without breaking the application
 	RegisterAlias(alias string, key string)
-
-	// ReadInConfig will discover and load the configuration file from disk
-	// and key/value stores, searching in one of the defined paths.
-	ReadInConfig() error
-
-	SetConfigFile(string)
 
 	WatchConfig() error
 	OnConfigChange(func(fsnotify.Event))
