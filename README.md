@@ -1,67 +1,15 @@
-![viper logo](https://cloud.githubusercontent.com/assets/173412/10886745/998df88a-8151-11e5-9448-4736db51020d.png)
-
-Go configuration with fangs!
-
-Many Go projects are built using Viper including:
-
-* [Hugo](http://gohugo.io)
-* [EMC RexRay](http://rexray.readthedocs.org/en/stable/)
-* [Imgur's Incus](https://github.com/Imgur/incus)
-* [Nanobox](https://github.com/nanobox-io/nanobox)/[Nanopack](https://github.com/nanopack)
-* [Docker Notary](https://github.com/docker/Notary)
-* [BloomApi](https://www.bloomapi.com/)
-* [doctl](https://github.com/digitalocean/doctl)
+# Go Configuration Manager Based on Viper
 
 [![Build Status](https://travis-ci.org/cafebazaar/viper.svg)](https://travis-ci.org/cafebazaar/viper) [![GoDoc](https://godoc.org/github.com/cafebazaar/viper?status.svg)](https://godoc.org/github.com/cafebazaar/viper)
 
-
 ## What is Viper?
 
-Viper is a complete configuration solution for go applications including 12 factor apps. It is designed
-to work within an application, and can handle all types of configuration needs
-and formats. It supports:
+[Viper](https://github.com/spf13/viper) is a complete configuration solution
+for go applications including 12 factor apps.
 
-* setting defaults
-* reading from JSON, TOML, YAML, HCL, and Java properties config files
-* live watching and re-reading of config files (optional)
-* reading from environment variables
-* reading from remote config systems (etcd or Consul), and watching changes
-* reading from command line flags
-* reading from buffer
-* setting explicit values
+## What is configman?
 
-Viper can be thought of as a registry for all of your applications
-configuration needs.
-
-## Why Viper?
-
-When building a modern application, you don’t want to worry about
-configuration file formats; you want to focus on building awesome software.
-Viper is here to help with that.
-
-Viper does the following for you:
-
-1. Find, load, and unmarshal a configuration file in JSON, TOML, YAML, HCL, or Java properties formats.
-2. Provide a mechanism to set default values for your different
-   configuration options.
-3. Provide a mechanism to set override values for options specified through
-   command line flags.
-4. Provide an alias system to easily rename parameters without breaking existing
-   code.
-5. Make it easy to tell the difference between when a user has provided a
-   command line or config file which is the same as the default.
-
-Viper uses the following precedence order. Each item takes precedence over the
-item below it:
-
- * explicit call to Set
- * flag
- * env
- * config
- * key/value store
- * default
-
-Viper configuration keys are case insensitive.
+**TODO**
 
 ## Putting Values into Viper
 
@@ -77,29 +25,6 @@ Examples:
 viper.SetDefault("ContentDir", "content")
 viper.SetDefault("LayoutDir", "layouts")
 viper.SetDefault("Taxonomies", map[string]string{"tag": "tags", "category": "categories"})
-```
-
-### Reading Config Files
-
-Viper requires minimal configuration so it knows where to look for config files.
-Viper supports JSON, TOML, YAML, HCL, and Java Properties files. Viper can search multiple paths, but
-currently a single Viper instance only supports a single configuration file.
-Viper does not default to any configuration search paths leaving defaults decision
-to an application.
-
-Here is an example of how to use Viper to search for and read a configuration file.
-None of the specific paths are required, but at least one path should be provided
-where a configuration file is expected.
-
-```go
-viper.SetConfigName("config") // name of config file (without extension)
-viper.AddConfigPath("/etc/appname/")   // path to look for the config file in
-viper.AddConfigPath("$HOME/.appname")  // call multiple times to add many search paths
-viper.AddConfigPath(".")               // optionally look for config in the working directory
-err := viper.ReadInConfig() // Find and read the config file
-if err != nil { // Handle errors reading the config file
-	panic(fmt.Errorf("Fatal error config file: %s \n", err))
-}
 ```
 
 ### Watching and re-reading config files
