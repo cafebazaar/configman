@@ -20,6 +20,7 @@ import (
 
 	"github.com/spf13/cast"
 
+	"github.com/cafebazaar/configman"
 	"github.com/spf13/pflag"
 	"github.com/stretchr/testify/assert"
 )
@@ -803,10 +804,10 @@ func TestSub(t *testing.T) {
 	assert.Equal(t, v.Get("clothing.pants.size"), subv.Get("size"))
 
 	subv = v.Sub("clothing.pants.size")
-	assert.Equal(t, (*Viper)(nil), subv)
+	assert.Equal(t, (configman.ConfigManager)(nil), subv)
 
 	subv = v.Sub("missing.key")
-	assert.Equal(t, (*Viper)(nil), subv)
+	assert.Equal(t, (configman.ConfigManager)(nil), subv)
 }
 
 var yamlMergeExampleTgt = []byte(`
@@ -1151,4 +1152,11 @@ func BenchmarkGetBoolFromMap(b *testing.B) {
 			b.Fatal("Map value was false")
 		}
 	}
+}
+
+func TestViperImplementsConfigManager(t *testing.T) {
+	v = New()
+	var q configman.ConfigManager
+	q = v
+	_ = q
 }

@@ -30,6 +30,7 @@ import (
 	"strings"
 	"time"
 
+	"github.com/cafebazaar/configman"
 	"github.com/fsnotify/fsnotify"
 	"github.com/mitchellh/mapstructure"
 	"github.com/spf13/afero"
@@ -517,8 +518,8 @@ func (v *Viper) Get(key string) interface{} {
 
 // Sub returns new Viper instance representing a sub tree of this instance.
 // Sub is case-insensitive for a key.
-func Sub(key string) *Viper { return v.Sub(key) }
-func (v *Viper) Sub(key string) *Viper {
+func Sub(key string) configman.ConfigManager { return v.Sub(key) }
+func (v *Viper) Sub(key string) configman.ConfigManager {
 	subv := New()
 	data := v.Get(key)
 	if data == nil {
