@@ -1,4 +1,4 @@
-go_import_path: github.com/cafebazaar/viper
+go_import_path: github.com/cafebazaar/configman
 
 language: go
 go:

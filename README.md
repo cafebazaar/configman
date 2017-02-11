@@ -1,6 +1,6 @@
 # Go Configuration Manager Based on Viper
 
-[![Build Status](https://travis-ci.org/cafebazaar/viper.svg)](https://travis-ci.org/cafebazaar/viper) [![GoDoc](https://godoc.org/github.com/cafebazaar/viper?status.svg)](https://godoc.org/github.com/cafebazaar/viper)
+[![Build Status](https://travis-ci.org/cafebazaar/configman.svg)](https://travis-ci.org/cafebazaar/configman) [![GoDoc](https://godoc.org/github.com/cafebazaar/configman?status.svg)](https://godoc.org/github.com/cafebazaar/configman)
 
 ## What is Viper?
 
@@ -235,93 +235,6 @@ fSet := myFlagSet{
 	flags: []myFlag{myFlag{}, myFlag{}},
 }
 viper.BindFlagValues("my-flags", fSet)
-```
-
-### Remote Key/Value Store Support
-
-To enable remote support in Viper, do a blank import of the `viper/remote`
-package:
-
-`import _ "github.com/cafebazaar/viper/remote"`
-
-Viper will read a config string (as JSON, TOML, YAML or HCL) retrieved from a path
-in a Key/Value store such as etcd or Consul.  These values take precedence over
-default values, but are overridden by configuration values retrieved from disk,
-flags, or environment variables.
-
-Viper uses [crypt](https://github.com/xordataexchange/crypt) to retrieve
-configuration from the K/V store, which means that you can store your
-configuration values encrypted and have them automatically decrypted if you have
-the correct gpg keyring.  Encryption is optional.
-
-You can use remote configuration in conjunction with local configuration, or
-independently of it.
-
-`crypt` has a command-line helper that you can use to put configurations in your
-K/V store. `crypt` defaults to etcd on http://127.0.0.1:4001.
-
-```bash
-$ go get github.com/xordataexchange/crypt/bin/crypt
-$ crypt set -plaintext /config/hugo.json /Users/hugo/settings/config.json
-```
-
-Confirm that your value was set:
-
-```bash
-$ crypt get -plaintext /config/hugo.json
-```
-
-See the `crypt` documentation for examples of how to set encrypted values, or
-how to use Consul.
-
-### Remote Key/Value Store Example - Unencrypted
-
-```go
-viper.AddRemoteProvider("etcd", "http://127.0.0.1:4001","/config/hugo.json")
-viper.SetConfigType("json") // because there is no file extension in a stream of bytes, supported extensions are "json", "toml", "yaml", "yml", "properties", "props", "prop"
-err := viper.ReadRemoteConfig()
-```
-
-### Remote Key/Value Store Example - Encrypted
-
-```go
-viper.AddSecureRemoteProvider("etcd","http://127.0.0.1:4001","/config/hugo.json","/etc/secrets/mykeyring.gpg")
-viper.SetConfigType("json") // because there is no file extension in a stream of bytes,  supported extensions are "json", "toml", "yaml", "yml", "properties", "props", "prop"
-err := viper.ReadRemoteConfig()
-```
-
-### Watching Changes in etcd - Unencrypted
-
-```go
-// alternatively, you can create a new viper instance.
-var runtime_viper = viper.New()
-
-runtime_viper.AddRemoteProvider("etcd", "http://127.0.0.1:4001", "/config/hugo.yml")
-runtime_viper.SetConfigType("yaml") // because there is no file extension in a stream of bytes, supported extensions are "json", "toml", "yaml", "yml", "properties", "props", "prop"
-
-// read from remote config the first time.
-err := runtime_viper.ReadRemoteConfig()
-
-// unmarshal config
-runtime_viper.Unmarshal(&runtime_conf)
-
-// open a goroutine to watch remote changes forever
-go func(){
-	for {
-	    time.Sleep(time.Second * 5) // delay after each request
-
-	    // currently, only tested with etcd support
-	    err := runtime_viper.WatchRemoteConfig()
-	    if err != nil {
-	        log.Errorf("unable to read remote config: %v", err)
-	        continue
-	    }
-
-	    // unmarshal new config into our runtime config struct. you can also use channel
-	    // to implement a signal to notify the system of the changes
-	    runtime_viper.Unmarshal(&runtime_conf)
-	}
-}()
 ```
 
 ## Getting Values From Viper
