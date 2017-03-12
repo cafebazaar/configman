@@ -1,10 +1,6 @@
 package configman
 
-import (
-	"time"
-
-	"github.com/fsnotify/fsnotify"
-)
+import "time"
 
 type ConfigManager interface {
 	Get(string) interface{}
@@ -42,5 +38,10 @@ type ConfigManager interface {
 	RegisterAlias(alias string, key string)
 
 	WatchConfig() error
-	OnConfigChange(func(fsnotify.Event))
+	AddToChangeListeners(ConfigChangeListener)
+	RemoveFromChangeListeners(ConfigChangeListener)
+}
+
+type ConfigChangeListener interface {
+	OnConfigChanged()
 }

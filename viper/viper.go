@@ -30,6 +30,8 @@ import (
 	"strings"
 	"time"
 
+	"sync"
+
 	"github.com/cafebazaar/configman"
 	"github.com/fsnotify/fsnotify"
 	"github.com/mitchellh/mapstructure"
@@ -127,9 +129,10 @@ type Viper struct {
 	aliases        map[string]string
 	typeByDefValue bool
 
-	watcher            *fsnotify.Watcher
-	onConfigChangeList []func(fsnotify.Event)
-	reloadFlag         chan bool
+	watcher                 *fsnotify.Watcher
+	onConfigChangeListeners []configman.ConfigChangeListener
+	onConfigChangeMutex     sync.Mutex
+	reloadFlag              chan bool
 }
 
 // New returns an initialized Viper instance.
@@ -146,7 +149,7 @@ func New() *Viper {
 	v.env = make(map[string]string)
 	v.aliases = make(map[string]string)
 	v.typeByDefValue = false
-	v.onConfigChangeList = make([]func(fsnotify.Event), 0)
+	v.onConfigChangeListeners = make([]configman.ConfigChangeListener, 0)
 	v.reloadFlag = make(chan bool, 1)
 
 	return v
@@ -163,12 +166,28 @@ func Reset() {
 // SupportedExts are universally supported extensions.
 var SupportedExts = []string{"json", "toml", "yaml", "yml", "properties", "props", "prop", "hcl"}
 
-// OnConfigChange adds a change listener to the list of current listeners
-func OnConfigChange(run func(in fsnotify.Event)) { v.OnConfigChange(run) }
+// AddToChangeListeners adds a change listener to the list of current listeners
+func AddToChangeListeners(l configman.ConfigChangeListener) { v.AddToChangeListeners(l) }
 
-// OnConfigChange adds a change listener to the list of current listeners
-func (v *Viper) OnConfigChange(run func(in fsnotify.Event)) {
-	v.onConfigChangeList = append(v.onConfigChangeList, run)
+// AddToChangeListeners adds a change listener to the list of current listeners
+func (v *Viper) AddToChangeListeners(l configman.ConfigChangeListener) {
+	v.onConfigChangeMutex.Lock()
+	v.onConfigChangeListeners = append(v.onConfigChangeListeners, l)
+	v.onConfigChangeMutex.Unlock()
+}
+
+// RemoveFromChangeListeners removes the change listener from the list of current listeners
+func RemoveFromChangeListeners(l configman.ConfigChangeListener) { v.RemoveFromChangeListeners(l) }
+
+// RemoveFromChangeListeners removes the change listener from the list of current listeners
+func (v *Viper) RemoveFromChangeListeners(l configman.ConfigChangeListener) {
+	v.onConfigChangeMutex.Lock()
+	for i := len(v.onConfigChangeListeners) - 1; i >= 0; i-- {
+		if v.onConfigChangeListeners[i] == l {
+			v.onConfigChangeListeners = append(v.onConfigChangeListeners[:i], v.onConfigChangeListeners[i+1:]...)
+		}
+	}
+	v.onConfigChangeMutex.Unlock()
 }
 
 func (v *Viper) patientlyReloadConfig(event fsnotify.Event) {
@@ -188,8 +207,8 @@ func (v *Viper) patientlyReloadConfig(event fsnotify.Event) {
 		log.Println("error:", err)
 		return
 	}
-	for _, onConfigChange := range v.onConfigChangeList {
-		onConfigChange(event)
+	for _, listener := range v.onConfigChangeListeners {
+		listener.OnConfigChanged()
 	}
 	// In case of remove/recreate:
 	filename, err := v.getConfigFile()
