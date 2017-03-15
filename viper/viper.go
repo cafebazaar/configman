@@ -184,7 +184,8 @@ func (v *Viper) RemoveFromChangeListeners(l configman.ConfigChangeListener) {
 	v.onConfigChangeMutex.Lock()
 	for i := len(v.onConfigChangeListeners) - 1; i >= 0; i-- {
 		if v.onConfigChangeListeners[i] == l {
-			v.onConfigChangeListeners = append(v.onConfigChangeListeners[:i], v.onConfigChangeListeners[i+1:]...)
+			v.onConfigChangeListeners = append(
+				v.onConfigChangeListeners[:i], v.onConfigChangeListeners[i+1:]...)
 		}
 	}
 	v.onConfigChangeMutex.Unlock()

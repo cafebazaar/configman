@@ -1160,3 +1160,42 @@ func TestViperImplementsConfigManager(t *testing.T) {
 	q = v
 	_ = q
 }
+
+type listenerMock struct {
+	i int
+}
+
+func (l *listenerMock) OnConfigChanged() {}
+
+func TestChangeListenersAddAndRemove(t *testing.T) {
+	l1 := &listenerMock{1}
+	l2 := &listenerMock{2}
+	l3 := &listenerMock{3}
+	l4 := &listenerMock{4}
+	v := New()
+	v.AddToChangeListeners(l1)
+	v.AddToChangeListeners(l2)
+	v.RemoveFromChangeListeners(l2)
+	v.AddToChangeListeners(l3)
+	v.AddToChangeListeners(l4)
+	v.AddToChangeListeners(l1)
+	v.RemoveFromChangeListeners(l1)
+
+	ls := v.onConfigChangeListeners
+	if len(ls) != 2 || !((ls[0] == l3 && ls[1] == l4) || (ls[0] == l4 && ls[1] == l3)) {
+		t.Fatalf("unexpected onConfigChangeListeners: %v", v.onConfigChangeListeners)
+	}
+
+	v.RemoveFromChangeListeners(l4)
+	v.RemoveFromChangeListeners(l3)
+	ls = v.onConfigChangeListeners
+	if len(ls) != 0 {
+		t.Fatalf("unexpected onConfigChangeListeners: %v", v.onConfigChangeListeners)
+	}
+
+	v.AddToChangeListeners(l2)
+	ls = v.onConfigChangeListeners
+	if len(ls) != 1 || ls[0] != l2 {
+		t.Fatalf("unexpected onConfigChangeListeners: %v", v.onConfigChangeListeners)
+	}
+}
