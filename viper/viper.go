@@ -284,6 +284,9 @@ func (v *Viper) SetEnvPrefix(in string) {
 }
 
 func (v *Viper) mergeWithEnvPrefix(in string) string {
+	in = strings.Replace(in, ".", "_", -1)
+	in = strings.Replace(in, "-", "_", -1)
+
 	if v.envPrefix != "" {
 		return strings.ToUpper(v.envPrefix + "_" + in)
 	}
@@ -810,7 +813,8 @@ func (v *Viper) find(lcaseKey string) interface{} {
 	if v.automaticEnvApplied {
 		// even if it hasn't been registered, if automaticEnv is used,
 		// check any Get request
-		if val = v.getEnv(v.mergeWithEnvPrefix(lcaseKey)); val != "" {
+		k := v.mergeWithEnvPrefix(lcaseKey)
+		if val = v.getEnv(k); val != "" {
 			return val
 		}
 		if nested && v.isPathShadowedInAutoEnv(path) != "" {
